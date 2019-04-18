@@ -7,7 +7,7 @@
 // orig method which is the require for previous bundles
 
 // eslint-disable-next-line no-global-assign
-
+myPartNames = {"nose":0, "leftEye":1, "rightEye":2, "leftEar":3, "rightEar":4, "leftShoulder":5, "rightShoulder":6, "leftElbow":7, "rightElbow":8, "leftWrist":9, "rightWrist":10, "leftHip":11, "rightHip":12, "leftKnee":13, "rightKnee":14, "leftAnkle":15, "rightAnkle":16}
 require = (function (modules, cache, entry) {
   // Save the require from previous bundle to this closure if any
   var previousRequire = typeof require === "function" && require;
@@ -38510,11 +38510,42 @@ function drawSkeleton(keypoints, minConfidence, ctx, scale = 1) {
 /**
  * Draw pose keypoints onto a canvas
  */
+/*CaesarYu*/
+ var rows = [["angle1", "angle2"]];
+ var collectFlag=false;
+  function outputCsv(){
+	let csvContent = "data:text/csv;charset=utf-8," + rows.map(e=>e.join(",")).join("\n");
+	var encodedUri = encodeURI(csvContent);
+	var link = document.createElement("a");
+	link.setAttribute("href", encodedUri);
+	link.setAttribute("download", "my_data.csv");
+
+	document.body.appendChild(link); // Required for FF
+	link.click()
+	document.body.removeChild(link);
+}
+function ctrCollect(){
+	if(collectFlag){
+	collectFlag=false;
+	}else{
+		collectFlag=true;
+	}
+}
+document.getElementById('outputbtn').onclick=outputCsv;
+document.getElementById('collectbtn').onclick=ctrCollect;
 function drawKeypoints(keypoints, minConfidence, ctx, scale = 1) {
+	
 	var x6=-1,y6=-1;
 	var x8=-1,y8=-1;
-	var x10=-1,y10=-1;
+	var x16=-1,y16=-1;
+	var x12=-1,y12=-1;
+	var x14=-1,y14=-1;
+	var ang1=null;
+	var ang2=null;
+	var ang3=null;
+	
   for (let i = 0; i < keypoints.length; i++) {
+	 var msize=3;
     const keypoint = keypoints[i];
 
     if (keypoint.score < minConfidence) {
@@ -38523,30 +38554,60 @@ function drawKeypoints(keypoints, minConfidence, ctx, scale = 1) {
 
     const { y, x } = keypoint.position;
 	var mcolor=color;
-	if (keypoint.part=="rightShoulder"){
+	if (keypoint.part=="leftShoulder"){
 		x6=x;
 		y6=y;
 		mcolor='red';
-	}else if(keypoint.part=="rightElbow"){
+		msize=6;
+	}else if(keypoint.part=="leftElbow"){
 		x8=x;
 		y8=y;
-		mcolor='red';
+		
 	}
-	else if(keypoint.part=="rightWrist"){
-		x10=x;
-		y10=y;
+	else if(keypoint.part=="leftAnkle"){
+		x16=x;
+		y16=y;
 		mcolor='red';
+		msize=6;
+	}	else if(keypoint.part=="leftHip"){
+		x12=x;
+		y12=y;
+		mcolor='red';
+		msize=6;
+	}	else if(keypoint.part=="leftKnee"){
+		x14=x;
+		y14=y;
+		mcolor='red';
+		msize=6;
 	}
-	document.getElementById("hint").innerHTML='R arm angle:'+angle(x6,y6,x10,y10,x8,y8)+'\n';
-    drawPoint(ctx, y * scale, x * scale, 3, mcolor);
+	
+	var test=[[x6,x8,x16]];
+	
+	ang1=angle(x6,y6,x14,y14,x12,y12);
+	ang2=angle(x14,y14,x6,y6,x16,y16);
+	
+	if(collectFlag&&ang1!=null&&ang2!=-null){
+	var angleList=[[ang1,ang2]]
+	if (rows.length<1500+1){
+	var delayInMilliseconds=4000;
+	setTimeout(rows.push(angleList), delayInMilliseconds);
+	}
+	}
+	document.getElementById("hint").innerHTML='ang:'+ang1+' '+ang2+' StratCollect? ->'+collectFlag;
+    drawPoint(ctx, y * scale, x * scale, msize, mcolor);
 	}
   
 }
-/*
-Caesar
-partNames = ["nose", "leftEye", "rightEye", "leftEar", "rightEar", "leftShoulder", "rightShoulder", "leftElbow", "rightElbow", "leftWrist", "rightWrist", "leftHip", "rightHip", "leftKnee", "rightKnee", "leftAnkle", "rightAnkle"]
-*/
+
+	//myPartNames = {"nose":0, "leftEye":1, "rightEye":2, "leftEar":3, "rightEar":4, "leftShoulder":5, 
+	//"rightShoulder":6, "leftElbow":7, "rightElbow":8, "leftWrist":9, "rightWrist":10, "leftHip":11, 
+	//"rightHip":12, "leftKnee":13, "rightKnee":14, "leftAnkle":15, "rightAnkle":16}
+
+
 function angle(x1,y1,x2,y2,x0,y0){
+	if(x1==-1||y1==-1||x2==-1||y2==-1||x0==-1||y0==-1){
+		return null
+	}else{
 	var c=Math.sqrt((x1-x0)**2+(y1-y0)**2);
 	var b=Math.sqrt((x2-x0)**2+(y2-y0)**2);
 	var a=Math.sqrt((x1-x2)**2+(y1-y2)**2);
@@ -38554,6 +38615,7 @@ function angle(x1,y1,x2,y2,x0,y0){
 	theta=Math.round(theta,-2);
 	//Math.atan2((y2-y0) - (y1-y0), (x2-x0) - (x1-x0) )*180 / Math.PI;
 	return theta
+	}
 }
 /**
  * Draw the bounding box of a pose. For example, for a whole person standing
